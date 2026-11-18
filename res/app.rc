@@ -1,0 +1,25 @@
+// app.rc — "recursos" embutidos no .exe: ícone, manifesto e informações de versão.
+#include <windows.h>
+#include "../src/versao.h"
+1 ICON "icone.ico"
+1 24 "app.manifest"   // 24 = RT_MANIFEST
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION SHARKINFO_VERSAO_NUM
+PRODUCTVERSION SHARKINFO_VERSAO_NUM
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "041604B0"
+    BEGIN
+      VALUE "FileDescription", "SharkInfo"
+      VALUE "ProductName", "SharkInfo"
+      VALUE "FileVersion", SHARKINFO_VERSAO
+      VALUE "ProductVersion", SHARKINFO_VERSAO
+      VALUE "LegalCopyright", "github.com/Pedr030/sharkinfo"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0416, 1200
+  END
+END

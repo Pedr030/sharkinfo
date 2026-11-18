@@ -1,0 +1,32 @@
+# Compila e roda os testes a cada envio pra main (e em pull requests).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar MinGW-w64 (compilador C++ que gera .exe do Windows)
+        run: sudo apt-get update -q && sudo apt-get install -y -q g++-mingw-w64-x86-64
+      - name: Compilar
+        run: ./build-mingw.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: build/
+
+  testar:
+    needs: compilar
+    runs-on: windows-latest          # os testes rodam num Windows de verdade
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: build
+      - name: Rodar testes
+        run: .\build\testes.exe

@@ -1,0 +1,72 @@
+# Publica uma release quando chega uma tag "vX.Y.Z" (ex.: git tag v1.1.0 && git push origin v1.1.0).
+# O SharkInfo instalado nos PCs vê a release nova e se atualiza sozinho.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write                    # necessário pra criar a release
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar MinGW-w64
+        run: sudo apt-get update -q && sudo apt-get install -y -q g++-mingw-w64-x86-64
+      - name: Compilar com a versão da tag
+        run: VERSAO="${GITHUB_REF_NAME#v}" ./build-mingw.sh
+      - name: Impressão digital (SHA-256) que o atualizador confere
+        run: cd build && sha256sum SharkInfo.exe > SharkInfo.exe.sha256 && cat SharkInfo.exe.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: build/
+
+  testar:
+    needs: compilar
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: build
+      - name: Rodar testes
+        run: .\build\testes.exe
+
+  publicar:
+    needs: testar                    # só publica se os testes passaram no Windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: build
+      - name: Montar as notas da release (a seção da versão no CHANGELOG.md)
+        run: |
+          VERSAO="${GITHUB_REF_NAME#v}"
+          {
+            echo "## O que baixar"
+            echo
+            echo "Baixe o **SharkInfo.exe** abaixo e coloque numa pasta fixa (ex.: \`C:\\Programas\\SharkInfo\\\`). Quem já usa recebe esta versão sozinho, pelo atualizador do app."
+            echo
+            echo "Na primeira vez, o Windows pode mostrar \"O Windows protegeu o computador\" (o .exe não tem assinatura digital paga): clique em **Mais informações → Executar assim mesmo**."
+            echo
+            echo "## Mudanças"
+            echo
+            awk -v v="$VERSAO" '
+              $0 ~ "^## \\[?v?" v "\\]?" { dentro=1; next }
+              dentro && /^## / { exit }
+              dentro { print }
+            ' CHANGELOG.md
+          } > notas.md
+          cat notas.md
+      - name: Criar a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" build/SharkInfo.exe build/SharkInfo.exe.sha256 \
+            --title "SharkInfo $GITHUB_REF_NAME" --notes-file notas.md
