@@ -61,7 +61,7 @@ No menu do ícone, em **Aparência**, há duas opções:
 ## Como funcionam as estimativas
 
 - **Filtro anti pula-pula:** a bateria "se recupera" um pouco quando o mouse descansa, e o número pode ir e voltar (80 → 90 → 80), principalmente em modelos que medem de 10 em 10%, como o X6/R1. Para descer, a maioria das leituras dos últimos 3 minutos precisa concordar. Para subir fora do cabo, o valor mais alto precisa se manter por 10 minutos.
-- **Bateria restante:** o app anota os "marcos de queda", que são os momentos em que a bateria chega a um valor mais baixo do que já tinha chegado. O tempo entre o primeiro e o último marco dá a velocidade de descarga. Enquanto a sessão atual ainda não tem dois marcos, ele usa a velocidade aprendida nos dias anteriores. Na primeira vez de todas, usa `horas_bateria_padrao` e mostra "(estimativa inicial)". A conta considera só o tempo de uso: PC desligado ou mouse dormindo separam as sessões.
+- **Bateria restante:** o app anota os "marcos de queda", que são os momentos em que a bateria chega a um valor mais baixo do que já tinha chegado. O tempo entre o primeiro e o último marco dá a velocidade de descarga. Enquanto a descarga atual ainda não tem dois marcos, ele usa a velocidade aprendida nas descargas anteriores. Na primeira vez de todas não há chute: aparece "calculando…" até o mouse cair um degrau inteiro (10%, no X6/R1). A conta considera só o tempo de uso: PC desligado ou mouse dormindo não contam, mas também não zeram nada, então os marcos de dias diferentes se somam e a estimativa sai mais cedo.
 - **Tempo de carga:** no cabo, o mouse Attack Shark **não informa a %**. Ele só avisa "carregando" e depois "cheio". Então o app anota com quantos % você plugou e quanto tempo levou até encher, e aprende a velocidade real de carga (mediana das últimas 5 cargas). Até a primeira carga completa, usa o padrão de 120 min de 0 a 100% e mostra "(aprendendo)".
 
 ## Celular (opcional)
@@ -83,7 +83,6 @@ Menu → **Abrir configurações** abre o `config.ini` no Bloco de Notas. Edite,
 | `segundos_aviso_na_tela` | 6 | Quanto tempo a faixa fica visível |
 | `posicao_aviso` | topo | `topo` ou `base` |
 | `minutos_carga_padrao` | 120 | Tempo de carga completa até o app aprender o real |
-| `horas_bateria_padrao` | 60 | Quantas horas de uso a bateria cheia dura, até o app aprender o real |
 | `forcar_escala_dezenas` | -1 | `1` se aparecer 7% quando o certo é 70%; `0` no caso contrário |
 | `widget_barra` | 1 | `0` desliga a % na barra de tarefas |
 | `icone_numero` | 0 | `1` mostra o número no ícone da bandeja |

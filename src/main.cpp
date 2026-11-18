@@ -139,8 +139,7 @@ static std::wstring TextoEstimativa(const Estado& e) {
         return L"Cheio em: calculando…";
     }
     if (e.descarga.minutos < 0) return L"Tempo restante: calculando…";
-    bool chute = e.descarga.fonte == EstimativaDescarga::PADRAO;
-    return L"Bateria dura ~" + FormatarMinutos(e.descarga.minutos) + (chute ? L" (estimativa inicial)" : L"");
+    return L"Bateria dura ~" + FormatarMinutos(e.descarga.minutos);
 }
 
 static Estado CopiaEstado() {
@@ -238,9 +237,8 @@ static std::wstring ResumoGrafico() {
     bool aprendido;
     double taxa = gHist->MinutosPorPorcentoCarga(aprendido);
     std::wstring pct = e.temLeitura && e.l.percentual >= 0 ? std::to_wstring(e.l.percentual) + L"%" : L"?";
-    std::wstring origem = e.descarga.fonte == EstimativaDescarga::SESSAO      ? L" (medido agora)"
-                          : e.descarga.fonte == EstimativaDescarga::HISTORICO ? L" (pelos dias anteriores)"
-                                                                              : L" (estimativa inicial)";
+    std::wstring origem = e.descarga.fonte == EstimativaDescarga::SESSAO ? L" (medido agora)"
+                                                                         : L" (pelas descargas anteriores)";
     if (e.descarga.minutos < 0) origem.clear();
     return L"Bateria agora: " + pct + L"\nTempo restante estimado: " + FormatarMinutos(e.descarga.minutos) + origem +
            L"\nCarga completa (0→100%): " + FormatarMinutos(taxa * 100) +
@@ -500,7 +498,6 @@ static void MostrarMenu(POINT pt) {
             gCfg = novo;
         }
         gHist->DefinirCargaPadrao(gCfg.minutosCargaPadrao);
-        gHist->DefinirBateriaPadrao(gCfg.horasBateriaPadrao);
         InterlockedExchange(&gReconectar, 1);                 // caso 'forcar_escala_dezenas' tenha mudado
         AplicarWidget();
         AjustarTimersAtualizacao();
@@ -572,9 +569,7 @@ static LRESULT CALLBACK ProcPrincipal(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         Estado e = CopiaEstado();
         AtualizarIcone(e);
         if (e.temLeitura) {
-            // No aviso só entra tempo restante "de verdade" (medido ou aprendido), nunca o chute inicial.
-            bool confiavel = e.descarga.minutos >= 0 && e.descarga.fonte != EstimativaDescarga::PADRAO;
-            std::wstring restante = confiavel ? FormatarMinutos(e.descarga.minutos) : L"";
+            std::wstring restante = e.descarga.minutos >= 0 ? FormatarMinutos(e.descarga.minutos) : L"";
             gAvisos->Processar(e.l, restante);
         }
         gGrafico.Atualizar();
@@ -642,7 +637,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     Gdiplus::GdiplusStartup(&gdiToken, &gdiEntrada, nullptr);
 
     gCfg = Config::Carregar();
-    gHist = std::make_unique<Historico>(PastaDados(gDemo), gCfg.minutosCargaPadrao, gCfg.horasBateriaPadrao);
+    gHist = std::make_unique<Historico>(PastaDados(gDemo), gCfg.minutosCargaPadrao);
     gAvisos = std::make_unique<GerenciadorAvisos>(
         gCfg, Notificar,
         [](const std::wstring& m, COLORREF c) { gFaixa.Mostrar(m, c, gCfg.segundosAvisoNaTela, gCfg.avisoNoTopo); });
