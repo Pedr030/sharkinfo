@@ -2,6 +2,10 @@
 
 Cada versão publicada tem uma seção aqui. O texto da seção vira as notas da release e aparece na janela de atualização do app.
 
+## v1.0.1
+
+- Versão de teste do atualizador: não muda nada no funcionamento do app. Se você está vendo este texto na janela de atualização, o ciclo completo (procurar, baixar, conferir o SHA-256 e trocar o arquivo) funcionou.
+
 ## v1.0.0
 
 - Primeira versão publicada no GitHub.
