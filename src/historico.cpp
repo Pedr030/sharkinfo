@@ -7,11 +7,10 @@
 static constexpr double INTERVALO_MINIMO = 60;           // grava no máx. 1 linha/minuto se nada mudar
 static constexpr double GUARDAR_SEGUNDOS = 30 * 86400.0; // mantém 30 dias em memória
 
-Historico::Historico(const std::wstring& pasta, double minutosCargaPadrao, double horasBateriaPadrao)
+Historico::Historico(const std::wstring& pasta, double minutosCargaPadrao)
     : arqLeituras_(pasta + L"\\leituras.csv"),
       arqCargas_(pasta + L"\\cargas.csv"),
-      minutosCargaPadrao_(minutosCargaPadrao),
-      horasBateriaPadrao_(horasBateriaPadrao) {
+      minutosCargaPadrao_(minutosCargaPadrao) {
     double limite = Agora() - GUARDAR_SEGUNDOS;
     // Lê o que já foi gravado em execuções anteriores.
     if (FILE* f = _wfopen(arqLeituras_.c_str(), L"r")) {
@@ -40,11 +39,6 @@ void Historico::Anexar(const std::wstring& arquivo, const std::string& linha) {
 void Historico::DefinirCargaPadrao(double minutos) {
     Segurando t(trava_);
     minutosCargaPadrao_ = minutos;
-}
-
-void Historico::DefinirBateriaPadrao(double horas) {
-    Segurando t(trava_);
-    horasBateriaPadrao_ = horas;
 }
 
 void Historico::Registrar(const Leitura& l) {
@@ -91,19 +85,30 @@ std::vector<PontoHistorico> Historico::LeiturasDesde(double segundos, double ago
     return r;
 }
 
-static constexpr double BURACO = 30 * 60;          // 30 min sem leitura = outra sessão de uso
+static constexpr double BURACO = 30 * 60;          // 30 min sem leitura = o mouse dormiu / o PC desligou
+static constexpr int SALTO_RECARGA = 20;            // subir tanto depois de um buraco = foi carregado fora do app
 
+// Cada descarga vai de um cabo ao próximo. Dentro dela o "relógio de uso" só anda enquanto há leituras
+// seguidas: um buraco (mouse dormindo, PC desligado) não conta. Assim, se o mouse caiu de 80 para 70
+// ontem e de 70 para 60 hoje, a taxa já sai com 2 marcos, em vez de esperar 2 marcos no mesmo dia.
 std::vector<std::vector<std::pair<double, double>>> SepararSessoes(const std::vector<PontoHistorico>& pts) {
     std::vector<std::vector<std::pair<double, double>>> sessoes;
     std::vector<std::pair<double, double>> atual;
-    double anterior = -1;
+    double anterior = -1, relogio = 0;
+    int pctAnterior = -1;
     for (const auto& p : pts) {
-        bool corta = p.carregando || (anterior >= 0 && p.momento - anterior > BURACO);
-        if (corta && !atual.empty()) {                 // fecha a sessão em andamento
+        bool buraco = anterior >= 0 && p.momento - anterior > BURACO;
+        bool recarregouFora = buraco && pctAnterior >= 0 && p.percentual >= pctAnterior + SALTO_RECARGA;
+        if ((p.carregando || recarregouFora) && !atual.empty()) {   // fecha a descarga em andamento
             sessoes.push_back(atual);
             atual.clear();
+            relogio = 0;
         }
-        if (!p.carregando) atual.push_back({p.momento, (double)p.percentual});
+        if (!p.carregando) {
+            if (!atual.empty() && !buraco) relogio += p.momento - anterior;   // só soma tempo "de uso"
+            atual.push_back({relogio, (double)p.percentual});
+            pctAnterior = p.percentual;
+        }
         anterior = p.momento;
     }
     if (!atual.empty()) sessoes.push_back(atual);
@@ -155,9 +160,7 @@ EstimativaDescarga Historico::EstimarDescarga(int pctAtual) const {
         e.fonte = EstimativaDescarga::HISTORICO;
         return e;
     }
-    // 3) Primeira vez: chute a partir de "bateria cheia dura X horas" (config).
-    e.minutos = pctAtual / 100.0 * horasBateriaPadrao_ * 60;
-    e.fonte = EstimativaDescarga::PADRAO;
+    // 3) Ainda não tem 2 marcos em lugar nenhum: sem chute, a interface mostra "calculando…".
     return e;
 }
 

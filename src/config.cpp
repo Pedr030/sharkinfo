@@ -49,7 +49,6 @@ Config Config::Carregar() {
     c.celularServidor = LerTexto(L"celular_servidor", c.celularServidor);
     c.avisarCargaCompleta = LerInt(L"avisar_carga_completa", c.avisarCargaCompleta) != 0;
     c.minutosCargaPadrao = std::max(10, LerInt(L"minutos_carga_padrao", c.minutosCargaPadrao));
-    c.horasBateriaPadrao = std::max(1, LerInt(L"horas_bateria_padrao", c.horasBateriaPadrao));
     c.forcarEscalaDezenas = LerInt(L"forcar_escala_dezenas", c.forcarEscalaDezenas);
     c.widgetBarra = LerInt(L"widget_barra", c.widgetBarra) != 0;
     c.iconeNumero = LerInt(L"icone_numero", c.iconeNumero) != 0;
@@ -72,7 +71,6 @@ void Config::Salvar() const {
     GravarTexto(L"celular_servidor", celularServidor);
     GravarInt(L"avisar_carga_completa", avisarCargaCompleta);
     GravarInt(L"minutos_carga_padrao", minutosCargaPadrao);
-    GravarInt(L"horas_bateria_padrao", horasBateriaPadrao);
     GravarInt(L"forcar_escala_dezenas", forcarEscalaDezenas);
     GravarInt(L"widget_barra", widgetBarra);
     GravarInt(L"icone_numero", iconeNumero);

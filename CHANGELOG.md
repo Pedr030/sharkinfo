@@ -4,7 +4,9 @@ Cada versão publicada tem uma seção aqui. O texto da seção vira as notas da
 
 ## v1.0.1
 
-- Versão de teste do atualizador: não muda nada no funcionamento do app. Se você está vendo este texto na janela de atualização, o ciclo completo (procurar, baixar, conferir o SHA-256 e trocar o arquivo) funcionou.
+- Fim do "chute" de tempo restante: antes o app mostrava algo como "48 h (estimativa inicial)". Agora, sem dados reais, mostra só "calculando…".
+- A estimativa sai mais cedo: o tempo em que o mouse dorme ou o PC fica desligado não zera mais a conta. Quedas de dias diferentes se somam, e depois da primeira descarga o app já sabe o tempo restante assim que você tira o mouse do cabo.
+- Se você está vendo este texto na janela de atualização, o ciclo completo do atualizador (procurar, baixar, conferir o SHA-256 e trocar o arquivo) funcionou.
 
 ## v1.0.0
 

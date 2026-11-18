@@ -57,9 +57,9 @@ static void TestarHistorico() {
     DeleteFileW((pasta + L"\\cargas.csv").c_str());
     double t0 = Agora() - 3 * 86400;
     {
-        Historico h(pasta, 120, 60);
+        Historico h(pasta, 120);
         auto e = h.EstimarDescarga(80);
-        CHECA(e.fonte == EstimativaDescarga::PADRAO && std::fabs(e.minutos - 2880) < 1);
+        CHECA(e.minutos < 0);                                      // sem dados: "calculando…", nada de chute
         double t = t0;
         int seq = 0;
         for (; t < t0 + 40 * 60; t += 60) h.Registrar(L((seq++ % 2) ? 90 : 80, t));   // pula-pula no começo
@@ -68,21 +68,43 @@ static void TestarHistorico() {
         h.Registrar(L(50, t));
         e = h.EstimarDescarga(50);
         CHECA(e.fonte == EstimativaDescarga::SESSAO && std::fabs(e.minutos - 300) < 15);
-        double t2 = t + 3 * 3600;                                  // PC desligado 3 h
+        double t2 = t + 3 * 3600;                                  // PC desligado 3 h (o buraco não conta como uso)
         h.Registrar(L(50, t2));
         h.Registrar(L(50, t2 + 600));
         h.Registrar(L(40, t2 + 1200));
-        e = h.EstimarDescarga(40);
-        CHECA(e.fonte == EstimativaDescarga::HISTORICO && std::fabs(e.minutos - 240) < 20);
+        e = h.EstimarDescarga(40);                                 // marcos 70..40: 30% em 120+20 min de uso
+        CHECA(e.fonte == EstimativaDescarga::SESSAO && std::fabs(e.minutos - 187) < 10);
         h.Registrar(L(40, t2 + 1300, true));                       // carga de 40% a 100% em 60 min
         auto c = h.EstimarCarga(t2 + 1300 + 600);
         CHECA(c.valida && !c.aprendido && std::fabs(c.minutos - 62) < 1);
         h.Registrar(L(100, t2 + 1300 + 3600, true));
         bool apr;
         CHECA(std::fabs(h.MinutosPorPorcentoCarga(apr) - 1.0) < 0.05 && apr);
+        h.Registrar(L(100, t2 + 1300 + 3600 + 60));                // tirou do cabo: descarga nova, sem marcos
+        e = h.EstimarDescarga(100);
+        CHECA(e.fonte == EstimativaDescarga::HISTORICO && std::fabs(e.minutos - 467) < 20);
     }
     {
-        Historico h2(pasta, 120, 60);                              // relê dos arquivos
+        // Mouse carregado fora do app: depois do buraco a % subiu 40 pontos sem cabo. Não pode misturar
+        // com a descarga de antes, senão os marcos novos nunca apareceriam.
+        std::wstring pasta2 = std::wstring(tmp) + L"sharkinfo_teste2";
+        CreateDirectoryW(pasta2.c_str(), nullptr);
+        DeleteFileW((pasta2 + L"\\leituras.csv").c_str());
+        DeleteFileW((pasta2 + L"\\cargas.csv").c_str());
+        Historico h3(pasta2, 120);
+        double u = Agora() - 2 * 86400;
+        h3.Registrar(L(80, u));
+        h3.Registrar(L(70, u + 1200));
+        h3.Registrar(L(60, u + 2400));
+        double u2 = u + 2400 + 5 * 3600;
+        h3.Registrar(L(100, u2));
+        h3.Registrar(L(90, u2 + 1200));
+        h3.Registrar(L(80, u2 + 2400));
+        auto e3 = h3.EstimarDescarga(80);                          // marcos 90 e 80: 10% em 20 min -> 80% dura 160 min
+        CHECA(e3.fonte == EstimativaDescarga::SESSAO && std::fabs(e3.minutos - 160) < 5);
+    }
+    {
+        Historico h2(pasta, 120);                                  // relê dos arquivos
         bool apr;
         h2.MinutosPorPorcentoCarga(apr);
         CHECA(apr);
