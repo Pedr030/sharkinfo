@@ -1,0 +1,2 @@
+# Scripts de shell sempre com LF, em qualquer maquina: CRLF do Windows quebra o bash.
+*.sh text eol=lf
