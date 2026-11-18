@@ -45,6 +45,11 @@ Ninguém rodou estas partes num PC de verdade. Teste antes de considerar prontas
 3. **Faixa por cima do jogo, notificações com ícone (`NIIF_USER`), envio pro ntfy, estimativa de carga e receptor Rongyuan.** Nada disso foi exercitado no hardware.
 4. **Build com MSVC/Visual Studio pelo `CMakeLists.txt`.** Nunca foi compilado. O CI usa MinGW.
 
+### Novidades da v1.0.2 ainda sem prova no hardware
+
+- **Polling rate:** nenhum receptor Attack Shark informa isso pelo USB, então é medido. A conta passou nos testes com tempos simulados, mas não foi comparada com um mouse real. Conferir se o X6/R1 mostra 1000 Hz (ou o que estiver configurado no software da Attack Shark). Acima de 2000 Hz o Windows pode juntar avisos e a medida perde precisão. Ideia ainda não feita: separar o histórico de descarga por polling rate, porque taxa mais alta gasta mais bateria.
+- **Hub:** o visual (cores, espaçamentos, ícones desenhados à mão) precisa de print real do dono.
+
 ### Versões antigas
 
 Os `.exe` mandados antes do GitHub (Python, "Barbatana" e "SharkInfo" sem versão) são `0.0.0-dev` ou anteriores e **não se atualizam sozinhos**. O dono precisa baixar a v1.0.0 manualmente uma vez. A partir dela, o atualizador assume.
@@ -110,7 +115,9 @@ VERSAO=1.2.0 ./build-mingw.sh    # versão de release (o CI chama assim)
 | `src/avisos.cpp/.h` | Faixa por cima do jogo, ntfy e o "porteiro" `GerenciadorAvisos` |
 | `src/icone.cpp/.h` | Desenha o mouse com selo e o modo número (GDI+), além do tema claro/escuro |
 | `src/widget.cpp/.h` | O "🖱 80%" encaixado na barra de tarefas |
-| `src/grafico.cpp/.h` | Janela do histórico, com o gráfico desenhado à mão em GDI+ |
+| `src/grafico.cpp/.h` | Janela do histórico clássica (item "Ver histórico" do menu), gráfico desenhado à mão em GDI+ |
+| `src/hub.cpp/.h` | O hub (v1.0.2): janela escura aberta pelo clique esquerdo, com páginas Início, Histórico, Avisos, Ajustes e Sobre. Tudo em GDI+, com "zonas clicáveis" refeitas a cada pintura. Cada botão vira um `HubAcao` que o `main.cpp` traduz para o mesmo `CMD_*` do menu |
+| `src/polling.cpp/.h` | Polling rate medido pelo Raw Input (thread própria + janela só de mensagens). `Medidor` é a conta pura (testada); grava `polling.csv` quando muda |
 | `src/atualizador.cpp/.h` | Atualização pelo GitHub Releases |
 | `src/config.cpp/.h` | `config.ini` (GetPrivateProfile*) |
 | `src/sistema.cpp/.h` | Iniciar com o Windows (registro `Run`) e mutex de instância única |
@@ -172,7 +179,7 @@ Ele roda **antes** de tudo (histórico, ícone e avisos), em `LacoLeitura`.
 
 - **Sessões de uso:** cortam no cabo e em buracos de mais de 30 min sem leitura. O app grava pelo menos 1 linha por minuto enquanto o mouse está acordado. Mouse dormindo ou PC desligado criam buracos, e assim a conta mede **tempo de uso**.
 - **Marcos de queda:** são os momentos em que a % chega a um valor mais baixo do que já tinha chegado na sessão. A taxa é `(1º marco − último marco) / tempo entre eles`. Exige 2 marcos e pelo menos 10 min entre eles. Subidas são ignoradas.
-- **Tempo restante:** a fonte `SESSAO` usa a taxa da descarga atual. Se não houver, a fonte `HISTORICO` usa a média das descargas anteriores, ponderada pelo tempo de uso. Sem nada, `minutos = -1` e a interface mostra "calculando…" (não existe mais chute inicial). Uma "descarga" vai de um cabo ao próximo; buracos sem leitura não cortam, só não contam no relógio de uso (por isso marcos de dias diferentes se somam). Só corta se, depois de um buraco, a % subir 20 pontos ou mais sem cabo (carregou fora do app).
+- **Tempo restante:** a fonte `SESSAO` usa a taxa da descarga atual. Se não houver, a fonte `HISTORICO` usa a média das descargas anteriores, ponderada pelo tempo de uso. Sem taxa nenhuma, a fonte `MINIMO` afirma "dura pelo menos `pct × d / 10`", onde `d` é o tempo de uso no mesmo degrau (só depois de 10 min; é um limite de verdade, não um chute, e só cresce). Os avisos não usam o `MINIMO`. Sem nem isso, `minutos = -1` e a interface mostra "calculando…" (não existe mais chute inicial). O marco de cada nível vale o fim do pula-pula (logo depois da última leitura acima dele). Uma "descarga" vai de um cabo ao próximo; buracos sem leitura não cortam, só não contam no relógio de uso (por isso marcos de dias diferentes se somam). Só corta se, depois de um buraco, a % subir 20 pontos ou mais sem cabo (carregou fora do app).
 - **Carga:** o mouse não informa a % no cabo. Então o app guarda a % de quando o cabo foi plugado e o horário em que chegou a 100%, e aprende a mediana dos minutos por % das últimas 5 cargas completas (só cargas que começaram abaixo de 95%). Até aprender, usa `minutos_carga_padrao` (120). O número no ícone enquanto carrega é o **palpite** da % atual.
 
 ### 5.5 Ícone e widget

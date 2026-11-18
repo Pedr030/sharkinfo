@@ -19,9 +19,11 @@ struct PontoHistorico {
 
 struct EstimativaDescarga {
     double minutos = -1;       // quanto tempo de USO ainda resta (-1 = sem estimativa)
-    enum Fonte { SESSAO, HISTORICO } fonte = SESSAO;
-    // SESSAO = medida na descarga de agora | HISTORICO = aprendida nas descargas anteriores.
-    // Não existe "chute": sem dados de verdade, minutos fica em -1 e a interface mostra "calculando…".
+    enum Fonte { SESSAO, HISTORICO, MINIMO } fonte = SESSAO;
+    // SESSAO = medida na descarga de agora | HISTORICO = aprendida nas descargas anteriores |
+    // MINIMO = ainda sem taxa, mas já dá pra afirmar "dura PELO MENOS isso" (o mouse já ficou X min
+    // no mesmo degrau; a taxa só pode ser mais lenta que isso). Nunca é chute: só cresce até virar a medida real.
+    // Sem nada disso, minutos fica em -1 e a interface mostra "calculando…".
 };
 
 struct EstimativaCarga {
