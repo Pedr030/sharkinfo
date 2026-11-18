@@ -25,11 +25,23 @@ O SharkInfo é um app de bandeja do Windows que mostra a bateria de mouses sem f
 
 ## 2. Estado atual (18/11/2026)
 
+### Linha do tempo das versões (todas publicadas em 18/11/2026)
+
+| Versão | O que entrou |
+|---|---|
+| v1.0.0 | Primeira release. Tudo o que está nas seções 4 e 5 abaixo. |
+| v1.0.1 | Tirou o chute inicial do tempo restante (dava "48 h"); a descarga passou a ir de um cabo ao próximo e buracos (mouse dormindo, PC desligado) não zeram a conta. Serviu também para provar o ciclo do atualizador. |
+| v1.0.2 | **Hub** (clique esquerdo), **polling rate medido** e o piso "dura pelo menos X". |
+| v1.0.3 | Tempo restante mostra "calculando…" com o piso pequeno ("Garantido: ≥ X"); textos do hub encurtados; escuta de polling mais sensível e com contador de avisos no cartão. |
+
 ### Provado no PC do dono
 
 - O receptor Xenta foi detectado, com o mouse identificado como **"Attack Shark X6 / R1"** (código de modelo `0x10`, que manda o nível **em dezenas**, 0..10).
 - O ícone com selo verde aparece na barra, a dica (tooltip) mostra "Attack Shark X6 / R1: 80%" e a janela do histórico abre e desenha.
 - O widget aparece na barra de tarefas, à esquerda da área de notificação.
+- **O hub abre e desenha** (print do dono em 18/11/2026): barra lateral, mouse grande com selo, bateria 80%, cartões de tempo restante, polling, carga e avisos. O dono achou o visual "bem interessante". Defeitos vistos no print e corrigidos na v1.0.3: subtítulos cortados com "…" e pílulas do polling coladas no texto.
+- **O atualizador chegou na v1.0.2 no PC do dono** (o `SharkInfo.exe` em `Downloads` estava na versão 1.0.2 sem ele baixar de novo). Falta só confirmar com ele que foi pelo atualizador e não por download manual.
+- O mouse estava na divisa 80 ↔ 90 (≈ 85%) quando o histórico foi lido; ficou em 80 de 19:27 até a hora do print (mais de 1 h sem cair para 70). É por isso que o tempo restante demora: o X6/R1 só informa de 10 em 10%.
 
 ### Problemas vistos no hardware real e já corrigidos (falta confirmar no PC)
 
@@ -41,14 +53,18 @@ O SharkInfo é um app de bandeja do Windows que mostra a bateria de mouses sem f
 Ninguém rodou estas partes num PC de verdade. Teste antes de considerar prontas:
 
 1. **Texto "80%" do widget.** No único print, a dica cobria o widget. Confirmar que o texto aparece e fica alinhado.
-2. **Atualizador.** A primeira release (v1.0.0) ainda vai sair. O teste real é publicar uma v1.0.1 e ver a v1.0.0 se atualizar sozinha.
+2. **Atualizador.** Ver "Provado" acima: provável, falta a confirmação do dono.
 3. **Faixa por cima do jogo, notificações com ícone (`NIIF_USER`), envio pro ntfy, estimativa de carga e receptor Rongyuan.** Nada disso foi exercitado no hardware.
 4. **Build com MSVC/Visual Studio pelo `CMakeLists.txt`.** Nunca foi compilado. O CI usa MinGW.
 
-### Novidades da v1.0.2 ainda sem prova no hardware
+### Pendências abertas (fim da sessão de 18/11/2026)
 
-- **Polling rate:** nenhum receptor Attack Shark informa isso pelo USB, então é medido. A conta passou nos testes com tempos simulados, mas não foi comparada com um mouse real. Conferir se o X6/R1 mostra 1000 Hz (ou o que estiver configurado no software da Attack Shark). Acima de 2000 Hz o Windows pode juntar avisos e a medida perde precisão. Ideia ainda não feita: separar o histórico de descarga por polling rate, porque taxa mais alta gasta mais bateria.
-- **Hub:** o visual (cores, espaçamentos, ícones desenhados à mão) precisa de print real do dono.
+1. **Polling rate NÃO funcionou no PC do dono (v1.0.2).** O cartão ficou em "—" mesmo mexendo o mouse. A conta passa nos testes (`TestarPolling`, tempos simulados), então o problema está na escuta do Windows (`polling.cpp`) ou nos limiares. Na v1.0.3 a janela de escuta virou uma janela comum oculta (antes era "só de mensagens"), os limiares ficaram mais baixos (25 avisos / 100 ms por trecho, 2 trechos) e o cartão mostra **"Medindo… (N avisos)"**. **Primeiro passo na próxima sessão:** pedir o print do cartão. Se aparecer "Mexa o mouse pra medir" mesmo mexendo, o Windows não está entregando `WM_INPUT` (problema de escuta); se aparecer "Medindo… (N avisos)" com N subindo e o Hz nunca fecha, o problema são os limiares ou o formato dos avisos. Um teste isolado em PowerShell rodou sem eventos, mas a sessão do Claude Code não tem desktop interativo, então não vale como prova.
+   - O dono lembrou que no software oficial da Attack Shark **o polling é uma opção que ele escolhe**, então a informação existe no mouse e dá para ler direto. Ver "Pesquisa do polling rate" na seção 5.1. O protocolo não é público; falta descobri-lo.
+   - Ideia ainda não feita: separar o histórico de descarga por polling rate, porque taxa mais alta gasta mais bateria.
+2. **Toggle "Número no ícone da bandeja" não funciona, segundo o dono.** Não consegui reproduzir. O código parece certo: `ExecutarComando(CMD_NUMERO)` inverte `gCfg.iconeNumero`, grava o `config.ini` e chama `AtualizarIcone`, que passa o flag para `DesenharIcone`. O `config.ini` do dono estava com `icone_numero=0` na hora. Hipóteses a testar, em ordem: (a) o dono olha o **widget** da barra (que não muda) e não o ícone da bandeja, que no Windows 11 fica escondido no "^"; (b) o ícone em modo número é desenhado mas fica ilegível ou transparente em 16 a 20 px (só o modo mouse foi visto em produção; os testes só conferem que o ícone não é nulo); (c) o clique do hub não chega (ver se os outros toggles do hub funcionam). **Perguntar ao dono o que ele vê** (menu ou hub, ícone na bandeja ou widget) antes de mexer.
+3. **Tempo restante:** o dono estranhou o "≥ 7 h 21 min" que só subia. É correto (um piso que ganha confiança), mas parecia uma contagem ao contrário, então na v1.0.3 virou "calculando…" com "Garantido: ≥ X" pequeno. Continua sem existir tempo restante de verdade até a primeira queda de 10%.
+4. **Hub:** o visual passou na primeira olhada do dono. Falta ver as outras abas (Histórico, Avisos, Ajustes, Sobre) com print.
 
 ### Versões antigas
 
@@ -73,13 +89,26 @@ VERSAO=1.2.0 ./build-mingw.sh    # versão de release (o CI chama assim)
 - **`.github/workflows/ci.yml`** (push na `main` e PRs): compila no Ubuntu com MinGW e roda `testes.exe` no Windows.
 - **`.github/workflows/release.yml`** (tag `v*`): compila com a versão da tag, gera o `SharkInfo.exe.sha256`, roda os testes no Windows e publica a release com as notas tiradas do `CHANGELOG.md`.
 
-### Publicar uma versão
+### Publicar uma versão (fluxo usado da v1.0.1 à v1.0.3, igual ao do repositório sinal-app)
 
-1. Adicione a seção `## vX.Y.Z` no `CHANGELOG.md`, com as mudanças em português. Esse texto aparece na janela de atualização do app.
-2. Faça o commit na `main` e espere o CI passar.
-3. Rode `git tag vX.Y.Z && git push origin vX.Y.Z`.
+O repositório tem duas branches fixas: **`development`** e **`main`**. Nada vai direto para a `main` (só a primeira carga do repositório foi assim).
+
+1. Crie uma branch de trabalho a partir de `origin/development` (`feat/...`, `fix/...` ou `release/vX.Y.Z`).
+2. Adicione a seção `## vX.Y.Z` no topo do `CHANGELOG.md`, com as mudanças em português. Esse texto vira as notas da release e aparece na janela de atualização do app.
+3. Commit em Conventional Commits em português, **sem linha de coautoria/IA**, e `git push -u origin <branch>`.
+4. Abra um PR da branch para `development` (`gh pr create --base development ...`) e espere o CI passar (`gh pr checks <n> --watch`). Merge com **merge commit** (`gh pr merge <n> --merge`), como no sinal-app.
+5. Abra um PR de `development` para `main` ("release: vX.Y.Z"), espere o CI e faça o merge.
+6. Atualize a `main` local (`git switch main && git pull --ff-only`) e rode `git tag vX.Y.Z && git push origin vX.Y.Z`. A tag dispara o workflow **Release**, que publica a release com `SharkInfo.exe` e `SharkInfo.exe.sha256`.
+7. Confira com `gh release view vX.Y.Z` que os dois anexos estão lá.
 
 **Não renomeie os anexos.** O atualizador procura exatamente `SharkInfo.exe` e `SharkInfo.exe.sha256` e espera a tag com prefixo `v`.
+
+Dicas que custaram tempo:
+
+- No PowerShell, `gh pr create --body "..."` com aspas e acentos quebra os argumentos. Use `--body-file arquivo.md`. Mensagem de commit longa: `git commit -F arquivo.txt` (o here-string `@'...'@` com `-F -` não funciona no PowerShell 5.1).
+- O workflow Release **travou uma vez** (v1.0.1) no passo "Instalar MinGW-w64" (o `apt`), por mais de 14 minutos; o normal é cerca de 1,5 minuto. Solução: `gh run cancel <id>` e depois `gh run rerun <id>`. Se a release não aparecer em `gh release list`, olhe `gh run list --workflow Release` antes de achar que a tag falhou.
+- **Não existe compilador na máquina do dono** (o Visual Studio 18 instalado não tem o componente C++ e não há MinGW). Quem compila é o CI; um erro de compilação só aparece depois do push. O CI leva cerca de 1 minuto e compila com `-Wall`; confira o log (`gh run view <id> --log`) procurando "warning".
+- O `core.autocrlf` do Windows tira a permissão de execução do `build-mingw.sh` e põe CRLF nele. Já existe `.gitattributes` com `*.sh text eol=lf`, e o modo executável foi restaurado com `git update-index --chmod=+x`.
 
 ---
 
@@ -125,15 +154,17 @@ VERSAO=1.2.0 ./build-mingw.sh    # versão de release (o CI chama assim)
 | `src/comum.h` | `Leitura`, `Trava`/`Segurando`, `Agora()`, `FormatarMinutos`, `PastaDados()` e mensagens |
 | `src/gdiplus_inc.h` | Inclui o GDI+ convivendo com `NOMINMAX` |
 | `res/` | Ícone do programa (barbatana com raio), manifesto (Common Controls 6, PerMonitorV2) e versão |
-| `tests/testes.cpp` | Testes: protocolo, histórico, suavizador, avisos, atualizador e ícones |
+| `tests/testes.cpp` | Testes: protocolo, histórico, polling, suavizador, avisos, atualizador e ícones |
+| `tools/sonda-hid.ps1` | Sonda **somente leitura** do receptor (interfaces HID e `GetFeature`). Não faz parte do build |
 
 ### Dados do usuário (`%APPDATA%\SharkInfo\`)
 
-`config.ini`, `leituras.csv` (`momento;percentual;carregando`), `cargas.csv` (`inicio;fim;percentual_inicial`), `diagnostico.txt`, `atualizacao\` (o `.exe` baixado) e `demo\`, que guarda o histórico separado do modo `--demo`.
+`config.ini`, `leituras.csv` (`momento;percentual;carregando`), `cargas.csv` (`inicio;fim;percentual_inicial`), `polling.csv` (`momento;hz`, só quando o polling medido muda), `diagnostico.txt`, `atualizacao\` (o `.exe` baixado) e `demo\`, que guarda o histórico separado do modo `--demo`. A chave antiga `horas_bateria_padrao` pode continuar no `config.ini` de quem já usava o app; é ignorada.
 
 ### Argumentos de linha de comando
 
 - `--demo`: mouse simulado com relógio acelerado (1 s real = 1 min).
+- `--hub`: já abre o hub ao iniciar (útil para testar).
 - `--diagnostico`: gera e abre o `diagnostico.txt`.
 - `--pos-atualizacao <pid>`: uso interno do atualizador.
 
@@ -156,6 +187,25 @@ VERSAO=1.2.0 ./build-mingw.sh    # versão de release (o CI chama assim)
 
 - Pergunta: feature report 0, `[00][F7][00…]`, com o tamanho exato do `FeatureReportByteLength`.
 - Resposta: `[id][ok][% teclado][% mouse][teclado off][mouse off]`.
+
+#### Pesquisa do polling rate (o que se sabe do receptor, 18/11/2026)
+
+O dono quer o polling **lido do mouse**, não medido, porque o software oficial deixa escolher a taxa. O que foi levantado no receptor `1D57:FA60` do X6/R1 (rodando `--diagnostico` e `tools/sonda-hid.ps1`):
+
+| Interface | Page / usage | Tamanhos | Função |
+|---|---|---|---|
+| `mi_00` | `0001 / 0006` | in 9, out 2 | teclado (padrão) |
+| `mi_01` | `0001 / 0002` | in 8 | **o mouse** |
+| `mi_02&col01` | `0001 / 0080` | in 2 | controle do sistema |
+| `mi_02&col02` | `000C / 0001` | in 3 | teclas de mídia |
+| `mi_02&col03` | `000A / 0000` | in 5 | **a bateria** (o canal que o app já escuta) |
+| `mi_02&col04` | `000B / 0000` | **feature 134** | **canal de configuração**, quase certamente o que o software oficial usa |
+| `mi_03` | `0001 / 0006` | in 15 | teclado (N-key) |
+
+- `HidD_GetFeature` em todos os report IDs de 0 a 255 **falha** em todas as interfaces. O canal `col04` é de comando e resposta: só responde depois de receber um comando por `SetFeature`, e os comandos não são públicos. **Não** mande bytes aleatórios nele: pode regravar configuração do mouse.
+- Software oficial em `C:\Program Files (x86)\Attack Shark Software\`: `AttackShark.exe` (a lógica), `hidapi.dll`, `Hook.dll` e um `hiddriver_N.dll` por modelo (1 a 18 e `4k_1`). Os `hiddriver_N.dll` só exportam o transporte (`Open_FeatureDevice`, `GetFeature`, `SetFeature`, `Hid_Read`, `Hid_Write`, `Set_VIDPID`, `Open_DevMonitor`...), sem os comandos. Os `Data\ms_N\pro.data` são o perfil salvo do mouse (quase todo zero), sem protocolo. Na mesma máquina há também o "REDRAGON Gaming Mouse" (software parecido, mesma família de firmware, hipótese não verificada).
+- **Como descobrir o comando:** capturar o USB (USBPcap + Wireshark) enquanto o dono troca o polling no software oficial entre 125, 250, 500 e 1000 Hz, e comparar os `SET_REPORT`/`GET_REPORT` de 134 bytes da interface `col04`. A leitura do polling atual deve ser um `SetFeature` de consulta seguido de `GetFeature`. Alternativa: desmontar `AttackShark.exe`.
+- Enquanto isso o app **mede** o polling pelo Raw Input. A medida só enxerga o que o Windows recebe; não vê o que está configurado no mouse.
 
 **Fontes:** krisgfx9/Wireless-Device-Battery-Monitor, KaiSta/attackSharkOnLinux, incconutwo/mouse-battery-tray e qu1ncky/BatteryTray. O projeto do krisgfx é **GPL-3.0**. Usamos só os **fatos do protocolo**, sem copiar código, e deve continuar assim.
 
@@ -202,6 +252,23 @@ Ele roda **antes** de tudo (histórico, ícone e avisos), em `LacoLeitura`.
 4. **Troca:** renomeia o `.exe` aberto para `.exe.old`, move o novo para o lugar, abre o novo com `--pos-atualizacao <pid>` e sai. O novo espera o PID antigo fechar e apaga o `.old`. No "Depois", a troca acontece no `WM_DESTROY` (ao sair), sem reabrir.
 5. **Versão `-dev`:** o atualizador fica desligado. O app não deve ficar em `Arquivos de Programas`, porque precisa de permissão para renomear o próprio arquivo.
 
+### 5.7 O hub (`hub.cpp`)
+
+- Clique esquerdo no ícone da bandeja (`NIN_SELECT`) ou no widget (`WM_APP_WIDGET`, wParam 1) chama `AbrirHub()` no `main.cpp`. O **clique direito continua igual** (menu). O item "Ver histórico" do menu ainda abre a janela clássica (`grafico.cpp`).
+- Janela normal (`WS_OVERLAPPEDWINDOW`, mínimo 900 × 640 a 96 dpi, repinta a cada 1 s) com barra de título escura via `DwmSetWindowAttribute` carregado dinamicamente (sem `dwmapi.lib`). Páginas: Início, Histórico, Avisos, Ajustes, Sobre.
+- **Sem controles do Windows.** Tudo é GDI+ em `Hub::Pintar`, com double buffering. Cada pintura refaz `zonas_` (retângulos com um id); `WM_MOUSEMOVE` acha o id sob o cursor (hover) e `WM_LBUTTONUP` age. Ids: `1000..1004` trocam de página, `2000/2001` o período do gráfico, e o resto são `HubAcao` (enum em `hub.h`).
+- O hub **não conhece o app**: recebe `std::function`s. `MontarDadosHub()` (main) devolve a foto `DadosHub`; `AcaoDoHub(int)` (main) traduz cada `HubAcao` para o mesmo `CMD_*` do menu via `ExecutarComando`, então menu e hub nunca divergem. Os limites de aviso (botões − e +) mudam de 5 em 5 por `AjustarLimite` (aviso de 10 a 50, crítico de 5 até aviso − 5).
+- O bitmap grande do mouse vem de `CriarBitmapMouse` (o mesmo do ícone) e fica em cache (`cacheMouse_`).
+- Ícones da barra lateral são desenhados com linhas (`Hub::Icone`), sem fonte de ícones.
+
+### 5.8 Polling rate medido (`polling.cpp`)
+
+- Thread própria com uma janela comum oculta (`WS_POPUP`, sem tamanho) registrada com `RegisterRawInputDevices(0x01, 0x02, RIDEV_INPUTSINK)`. A thread principal fica livre.
+- A cada `WM_INPUT` de mouse (só movimento relativo, `lLastX/Y` diferentes de zero) o `Medidor` recebe o instante em ms (`QueryPerformanceCounter`). Um **trecho** é um movimento contínuo (pausa maior que 40 ms fecha, e trecho longo fecha a cada 500 ms); a taxa do trecho é `(avisos − 1) / duração`. Vale trecho com pelo menos 25 avisos e 100 ms. O resultado é o **percentil 75** das últimas 24 taxas (mouse devagar perde avisos, então erra para baixo), arredondado para 125, 250, 500, 1000, 2000, 4000 ou 8000 Hz pela distância em escala logarítmica. Precisa de 2 trechos.
+- Um `Medidor` por dispositivo (`hDevice`). O Attack Shark é reconhecido pelo nome do dispositivo (`VID_1D57`) e tem preferência; outros mouses só valem se nenhum Attack Shark apareceu.
+- `Resultado` traz `hz`, `aoVivo`, `momento`, `eventos` (todos os `WM_INPUT` de mouse) e `trechos`. A medida é guardada em `polling.csv` quando muda e relida na abertura (aparece como "Última medição").
+- Acima de 2000 Hz o Windows pode juntar avisos e a medida perde precisão.
+
 ---
 
 ## 6. Convenções
@@ -217,9 +284,10 @@ Ele roda **antes** de tudo (histórico, ícone e avisos), em `LacoLeitura`.
 
 ## 7. Próximos passos sugeridos
 
-1. Publicar a **v1.0.0** (tag já criada localmente na sessão anterior; se não existir no repositório, criar) e confirmar que a release saiu com os dois anexos.
-2. Pedir ao dono para instalar a v1.0.0, depois publicar uma **v1.0.1** pequena e confirmar o ciclo inteiro do atualizador no PC dele.
-3. Confirmar o **texto do widget** e o alinhamento com um print sem a dica por cima.
-4. Testar a **faixa** e as **notificações** com o `--demo` (descarrega até 5%, vai pro cabo e enche em ~2 min).
-5. Descobrir quanto o X6/R1 dura de verdade (agora o app aprende sozinho, sem padrão).
-6. Ideias que o dono pode querer: suporte a headset (o print original do krisgfx mostrava headset + mouse), widget em segundo monitor e escolha de cores.
+1. **Polling rate:** pedir o print do cartão (ver "Pendências abertas", item 1) e corrigir a escuta. Depois, se o dono topar, capturar o USB com o software oficial para ler o polling direto do mouse (seção 5.1, "Pesquisa do polling rate").
+2. **Toggle do número no ícone:** perguntar ao dono o que ele vê e seguir as hipóteses da pendência 2.
+3. Ver com print as abas Histórico, Avisos, Ajustes e Sobre do hub.
+4. Confirmar o **texto do widget** e o alinhamento com um print sem a dica por cima.
+5. Testar a **faixa** e as **notificações** com o `--demo` (descarrega até 5%, vai pro cabo e enche em ~2 min).
+6. Ver o tempo restante de verdade quando o mouse cair de 80 para 70 (primeira queda de 10%) e conferir se o número é plausível.
+7. Ideias que o dono pode querer: separar a estimativa de bateria por polling rate, suporte a headset (o print original do krisgfx mostrava headset + mouse), widget em segundo monitor e escolha de cores.

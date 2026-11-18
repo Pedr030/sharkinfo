@@ -14,8 +14,8 @@ namespace polling {
 // ---------------------------------------------------------------------------
 static constexpr double PAUSA_MS = 40;          // mais que isso sem aviso = o mouse parou (fecha o trecho)
 static constexpr double TRECHO_MAX_MS = 500;    // trecho longo vira uma medida a cada meio segundo
-static constexpr double TRECHO_MIN_MS = 150;    // trecho curto demais não é confiável
-static constexpr int TRECHO_MIN_AVISOS = 40;
+static constexpr double TRECHO_MIN_MS = 100;    // trecho curto demais não é confiável
+static constexpr int TRECHO_MIN_AVISOS = 25;
 static constexpr size_t TRECHOS_GUARDADOS = 24;
 
 void Medidor::Zerar() {
@@ -63,7 +63,7 @@ int AjustarParaTaxaComum(double hz) {
 }
 
 int Medidor::Hz() const {
-    if (taxas_.size() < 3) return 0;
+    if (taxas_.size() < 2) return 0;
     // Quando o mouse se mexe devagar, alguns avisos "faltam" (não houve movimento naquele instante), então
     // as medidas erram pra BAIXO. Por isso vale um valor alto do conjunto (percentil 75), não a média.
     std::vector<double> ordenadas = taxas_;
@@ -81,6 +81,8 @@ static std::wstring gArquivo;
 static HWND gJanela = nullptr;
 static HANDLE gThread = nullptr;
 static HINSTANCE gInst = nullptr;
+static volatile LONG gEventos = 0;               // total de avisos de mouse recebidos (diagnóstico)
+static volatile LONG gTrechos = 0;
 
 static double AgoraMs() {
     static LARGE_INTEGER freq = [] {
@@ -139,6 +141,7 @@ static void AoMover(HANDLE dispositivo, double ms) {
     Dispositivo& d = it->second;
     if (d.nosso) gViuNosso = true;
     bool novo = d.medidor.Evento(ms);
+    if (novo) InterlockedIncrement(&gTrechos);
     if (!novo || (!d.nosso && gViuNosso)) return;            // já achamos o Attack Shark: ignora os outros mouses
     int hz = d.medidor.Hz();
     if (hz > 0) Publicar(hz);
@@ -151,9 +154,12 @@ static LRESULT CALLBACK ProcPolling(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         UINT lidos = GetRawInputData((HRAWINPUT)lp, RIM_INPUT, buf, &tam, sizeof(RAWINPUTHEADER));
         if (lidos != (UINT)-1) {
             const RAWINPUT* ri = reinterpret_cast<const RAWINPUT*>(buf);
-            if (ri->header.dwType == RIM_TYPEMOUSE && !(ri->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) &&
-                (ri->data.mouse.lLastX != 0 || ri->data.mouse.lLastY != 0))     // só movimento (não clique/rodinha)
-                AoMover(ri->header.hDevice, AgoraMs());
+            if (ri->header.dwType == RIM_TYPEMOUSE) {
+                InterlockedIncrement(&gEventos);
+                if (!(ri->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) &&
+                    (ri->data.mouse.lLastX != 0 || ri->data.mouse.lLastY != 0))   // só movimento (não clique/rodinha)
+                    AoMover(ri->header.hDevice, AgoraMs());
+            }
         }
         return DefWindowProcW(h, msg, wp, lp);               // o Windows pede pra repassar (ele limpa a fila)
     }
@@ -174,8 +180,10 @@ static DWORD WINAPI ThreadPolling(LPVOID) {
     wc.hInstance = gInst;
     wc.lpszClassName = L"SharkInfoPolling";
     RegisterClassW(&wc);
-    // Janela "só de mensagens": invisível, existe apenas pra receber os avisos do Raw Input.
-    HWND h = CreateWindowExW(0, wc.lpszClassName, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, gInst, nullptr);
+    // Janela comum, mas invisível e sem tamanho: existe apenas pra receber os avisos do Raw Input.
+    // (Não uso a "só de mensagens" porque a escuta do mouse é mais garantida numa janela normal.)
+    HWND h = CreateWindowExW(WS_EX_TOOLWINDOW, wc.lpszClassName, L"SharkInfo polling", WS_POPUP, 0, 0, 0, 0, nullptr,
+                             nullptr, gInst, nullptr);
     if (!h) return 1;
     RAWINPUTDEVICE rid{};
     rid.usUsagePage = 0x01;                                  // "controles genéricos"
@@ -225,7 +233,10 @@ void Parar() {
 
 Resultado Atual() {
     Segurando t(gTrava);
-    return gResultado;
+    Resultado r = gResultado;
+    r.eventos = (unsigned)gEventos;
+    r.trechos = (int)gTrechos;
+    return r;
 }
 
 }  // namespace polling
