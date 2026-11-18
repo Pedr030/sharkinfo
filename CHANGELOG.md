@@ -2,6 +2,12 @@
 
 Cada versão publicada tem uma seção aqui. O texto da seção vira as notas da release e aparece na janela de atualização do app.
 
+## v1.0.3
+
+- Tempo restante mais honesto: enquanto o app ainda não mediu a descarga, o destaque fica "calculando…" e o valor garantido aparece pequeno ("Garantido: ≥ 7 h"). Antes o número grande só subia, parecendo uma contagem ao contrário.
+- Hub: textos que estavam cortados nos cartões foram encurtados e o cartão do polling rate ganhou espaço.
+- Polling rate: a escuta ficou mais sensível (aceita movimentos mais curtos) e o cartão mostra quantos avisos de movimento já chegaram, pra dar pra ver se a medição está viva.
+
 ## v1.0.2
 
 - Novo **hub**: o clique esquerdo no ícone (ou na % da barra de tarefas) abre uma janela escura com tudo num lugar só: o mouse grande com a bateria, tempo restante, polling rate, tempo de carga, histórico, avisos, ajustes e atualizações. O clique direito continua abrindo o mesmo menu de antes.

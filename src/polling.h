@@ -38,6 +38,8 @@ struct Resultado {
     int hz = 0;               // 0 = nunca medido
     bool aoVivo = false;      // true = medido nesta execução; false = a última medição salva
     double momento = 0;       // quando foi medido (segundos Unix)
+    unsigned eventos = 0;     // quantos avisos de movimento o Windows já mandou (pra saber se a escuta funciona)
+    int trechos = 0;          // quantos trechos de movimento já serviram de medida
 };
 
 // Liga a medição numa thread própria (a principal precisa ficar livre). 'pasta' guarda o polling.csv.

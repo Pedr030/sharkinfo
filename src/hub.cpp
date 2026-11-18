@@ -407,21 +407,22 @@ static void TextosRestante(const DadosHub& d, std::wstring& titulo, std::wstring
             sub = L"Pode tirar do cabo";
         } else if (d.carga.valida) {
             valor = L"~" + FormatarMinutos(d.carga.minutos);
-            sub = d.carga.aprendido ? L"para encher (aprendido nas suas cargas)" : L"para encher (ainda aprendendo)";
+            sub = d.carga.aprendido ? L"Pra encher (aprendido)" : L"Pra encher (aprendendo)";
         } else {
             valor = L"calculando…";
             sub = L"Anotando quando o cabo foi plugado";
         }
     } else if (d.descarga.minutos < 0) {
         valor = L"calculando…";
-        sub = L"Precisa ver a bateria cair um degrau (10%)";
+        sub = L"Esperando a 1ª queda de 10%";
     } else if (d.descarga.fonte == EstimativaDescarga::MINIMO) {
-        valor = L"≥ " + FormatarMinutos(d.descarga.minutos);
-        sub = L"Pelo menos isso. Ainda medindo, só cresce";
+        // Ainda não é uma contagem regressiva: o número é só um piso garantido, que sobe enquanto o mouse
+        // segue no mesmo degrau. Por isso fica no subtítulo, e o destaque continua "calculando…".
+        valor = L"calculando…";
+        sub = L"Garantido: ≥ " + FormatarMinutos(d.descarga.minutos);
     } else {
         valor = L"~" + FormatarMinutos(d.descarga.minutos);
-        sub = d.descarga.fonte == EstimativaDescarga::SESSAO ? L"Medido na descarga de agora"
-                                                              : L"Pelas suas descargas anteriores";
+        sub = d.descarga.fonte == EstimativaDescarga::SESSAO ? L"Medido agora" : L"Pelas descargas anteriores";
     }
 }
 
@@ -558,7 +559,7 @@ void Hub::PaginaInicio(float x, float y, float w, float h) {
 
     // ---- Coluna da direita: os cartões ----
     float rx = x + hw + P(20), rw = w - hw - P(20);
-    float cw = (rw - P(16)) / 2, ch = P(132);
+    float cw = (rw - P(16)) / 2, ch = P(140);
     auto cartao = [&](int col, int lin, const std::wstring& titulo, const std::wstring& valor, const std::wstring& sub,
                       unsigned corValor) {
         float cx = rx + col * (cw + P(16)), cy = hy + lin * (ch + P(16));
@@ -575,12 +576,13 @@ void Hub::PaginaInicio(float x, float y, float w, float h) {
 
     // Polling rate (com a régua das taxas comuns)
     std::wstring pv = d.pollingHz > 0 ? std::to_wstring(d.pollingHz) + L" Hz" : L"—";
-    std::wstring ps = d.pollingHz > 0 ? (d.pollingAoVivo ? L"Medido agora, pelo movimento do mouse" : L"Última medição (mexa o mouse pra atualizar)")
-                                      : L"Mexa o mouse um pouco pra medir";
+    std::wstring ps = d.pollingHz > 0 ? (d.pollingAoVivo ? L"Medido agora" : L"Última medição")
+                      : d.pollingEventos == 0 ? L"Mexa o mouse pra medir"
+                                              : L"Medindo… (" + std::to_wstring(d.pollingEventos) + L" avisos)";
     auto pos = cartao(1, 0, L"POLLING RATE", pv, ps, d.pollingHz > 0 ? cor::ACENTO : cor::SUAVE);
     {
         static const int taxas[] = {125, 250, 500, 1000, 2000};
-        float pw = (cw - P(36) - 4 * P(6)) / 5, pyy = pos.second + ch - P(28);
+        float pw = (cw - P(36) - 4 * P(6)) / 5, pyy = pos.second + ch - P(26);
         for (int i = 0; i < 5; ++i) {
             bool acesa = d.pollingHz > 0 && (i == 4 ? d.pollingHz >= 2000 : d.pollingHz == taxas[i]);
             float pxx = pos.first + P(18) + i * (pw + P(6));
@@ -590,7 +592,7 @@ void Hub::PaginaInicio(float x, float y, float w, float h) {
     }
 
     cartao(0, 1, L"CARGA COMPLETA", FormatarMinutos(d.minutosCargaCompleta),
-           d.cargaAprendida ? L"De 0 a 100%, aprendido nas suas cargas" : L"De 0 a 100%, valor padrão (aprendendo)", cor::TEXTO);
+           d.cargaAprendida ? L"De 0 a 100%, aprendido" : L"De 0 a 100%, valor padrão", cor::TEXTO);
     cartao(1, 1, L"AVISOS", std::to_wstring(d.cfg.avisoPercentual) + L"%  ·  " + std::to_wstring(d.cfg.criticoPercentual) + L"%",
            L"Primeiro aviso e aviso urgente", cor::TEXTO);
 

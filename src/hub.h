@@ -35,6 +35,7 @@ struct DadosHub {
     Config cfg;
     int pollingHz = 0;                       // 0 = ainda não medido
     bool pollingAoVivo = false;              // medido nesta execução (senão é a última medição salva)
+    unsigned pollingEventos = 0;             // avisos de movimento recebidos (mostra que a escuta está viva)
     bool iniciaComWindows = false;
     std::wstring versao;
     std::wstring versaoNova;                 // vazio = não há atualização pendente
