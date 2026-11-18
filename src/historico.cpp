@@ -87,6 +87,8 @@ std::vector<PontoHistorico> Historico::LeiturasDesde(double segundos, double ago
 
 static constexpr double BURACO = 30 * 60;          // 30 min sem leitura = o mouse dormiu / o PC desligou
 static constexpr int SALTO_RECARGA = 20;            // subir tanto depois de um buraco = foi carregado fora do app
+static constexpr double MINIMO_PARA_PISO = 10 * 60; // só mostra o "pelo menos" depois de 10 min no mesmo degrau
+static constexpr double DEGRAU = 10;                // o maior degrau que um mouse usa (10%): o mais cauteloso
 
 // Cada descarga vai de um cabo ao próximo. Dentro dela o "relógio de uso" só anda enquanto há leituras
 // seguidas: um buraco (mouse dormindo, PC desligado) não conta. Assim, se o mouse caiu de 80 para 70
@@ -115,6 +117,15 @@ std::vector<std::vector<std::pair<double, double>>> SepararSessoes(const std::ve
     return sessoes;
 }
 
+// Momento (relógio de uso) em que a bateria passou a ficar de vez abaixo de 'valor': logo depois da
+// última leitura ACIMA dele. Se o mouse ficou pulando entre dois níveis (80 ↔ 90) na divisa, vale o
+// fim do pula-pula, não a primeira vez que o nível menor apareceu. -1 se a última leitura ainda está acima.
+static double MomentoDeCruzamento(const std::vector<std::pair<double, double>>& s, double valor, double padrao) {
+    for (size_t i = s.size(); i-- > 0;)
+        if (s[i].second > valor) return i + 1 < s.size() ? s[i + 1].first : -1;
+    return padrao;                                       // nunca esteve acima: vale o que já tínhamos
+}
+
 double TaxaPorMarcos(const std::vector<std::pair<double, double>>& sessao) {
     if (sessao.empty()) return -1;
     double minimo = sessao.front().second;
@@ -124,6 +135,12 @@ double TaxaPorMarcos(const std::vector<std::pair<double, double>>& sessao) {
             minimo = p.second;
             marcos.push_back(p);
         }
+    double anterior = 0;
+    for (auto& m : marcos) {                             // acerta cada marco pro cruzamento "de verdade"
+        double t = MomentoDeCruzamento(sessao, m.second, m.first);
+        if (t >= 0) m.first = std::max(t, anterior);
+        anterior = m.first;
+    }
     if (marcos.size() < 2) return -1;
     double tempo = marcos.back().first - marcos.front().first;
     double queda = marcos.front().second - marcos.back().second;
@@ -160,7 +177,18 @@ EstimativaDescarga Historico::EstimarDescarga(int pctAtual) const {
         e.fonte = EstimativaDescarga::HISTORICO;
         return e;
     }
-    // 3) Ainda não tem 2 marcos em lugar nenhum: sem chute, a interface mostra "calculando…".
+    // 3) Ainda não tem 2 marcos em lugar nenhum. Sem chute, mas dá pra afirmar um MÍNIMO de verdade:
+    //    se o mouse já ficou 'd' no mesmo degrau de 10% (sem cair pro de baixo), a descarga é mais lenta
+    //    que 10% em 'd', então a % de agora dura pelo menos pct * d / 10. Cresce a cada minuto de uso.
+    if (sessaoViva) {
+        const auto& s = sessoes.back();
+        double inicio = MomentoDeCruzamento(s, s.back().second, s.front().first);
+        double d = s.back().first - (inicio >= 0 ? inicio : s.back().first);
+        if (d >= MINIMO_PARA_PISO) {
+            e.minutos = pctAtual * (d / 60) / DEGRAU;
+            e.fonte = EstimativaDescarga::MINIMO;
+        }
+    }
     return e;
 }
 

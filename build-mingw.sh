@@ -18,6 +18,6 @@ $WINDRES res/app.rc -O coff -o build/app.res.o
 $CXX $FLAGS src/*.cpp build/app.res.o -o build/SharkInfo.exe -mwindows -static -s $LIBS
 # Testes (rodam no Windows de verdade, no GitHub Actions)
 $CXX $FLAGS -Isrc tests/testes.cpp src/leitores.cpp src/historico.cpp src/avisos.cpp src/icone.cpp \
-  src/config.cpp src/atualizador.cpp -o build/testes.exe -static $LIBS
+  src/config.cpp src/atualizador.cpp src/polling.cpp -o build/testes.exe -static $LIBS
 rm -f build/app.res.o
 echo "Pronto: build/SharkInfo.exe ($(grep '^#define SHARKINFO_VERSAO ' src/versao.h | cut -d'"' -f2))"

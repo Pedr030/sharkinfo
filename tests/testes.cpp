@@ -7,6 +7,7 @@
 #include "historico.h"
 #include "icone.h"
 #include "leitores.h"
+#include "polling.h"
 #include "suavizador.h"
 
 #include <cmath>
@@ -102,6 +103,39 @@ static void TestarHistorico() {
         h3.Registrar(L(80, u2 + 2400));
         auto e3 = h3.EstimarDescarga(80);                          // marcos 90 e 80: 10% em 20 min -> 80% dura 160 min
         CHECA(e3.fonte == EstimativaDescarga::SESSAO && std::fabs(e3.minutos - 160) < 5);
+    }
+    {
+        // Sem taxa ainda, mas 40 min no mesmo degrau: "dura pelo menos" 80 * 40 / 10 = 320 min.
+        std::wstring pasta3 = std::wstring(tmp) + L"sharkinfo_teste3";
+        CreateDirectoryW(pasta3.c_str(), nullptr);
+        DeleteFileW((pasta3 + L"\\leituras.csv").c_str());
+        DeleteFileW((pasta3 + L"\\cargas.csv").c_str());
+        Historico h4(pasta3, 120);
+        double v = Agora() - 2 * 86400;
+        h4.Registrar(L(90, v));
+        for (int m = 1; m <= 41; ++m) h4.Registrar(L(80, v + m * 60));
+        auto e4 = h4.EstimarDescarga(80);
+        CHECA(e4.fonte == EstimativaDescarga::MINIMO && std::fabs(e4.minutos - 320) < 10);
+        h4.Registrar(L(80, v + 42 * 60));
+        for (int m = 43; m <= 60; ++m) h4.Registrar(L(70, v + m * 60));   // caiu pro 70: já são 2 marcos (80 e 70)
+        e4 = h4.EstimarDescarga(70);                               // 10% em 42 min -> 70% dura 294 min
+        CHECA(e4.fonte == EstimativaDescarga::SESSAO && std::fabs(e4.minutos - 294) < 10);
+    }
+    {
+        // Mouse pulando 90 ↔ 80 na divisa por 50 min: o marco do 80 vale o fim do pula-pula, não o 1º 80.
+        std::wstring pasta4 = std::wstring(tmp) + L"sharkinfo_teste4";
+        CreateDirectoryW(pasta4.c_str(), nullptr);
+        DeleteFileW((pasta4 + L"\\leituras.csv").c_str());
+        DeleteFileW((pasta4 + L"\\cargas.csv").c_str());
+        Historico h5(pasta4, 120);
+        double w = Agora() - 2 * 86400;
+        int m = 0;
+        for (; m < 50; ++m) h5.Registrar(L(m % 2 ? 80 : 90, w + m * 60));
+        for (; m < 110; ++m) h5.Registrar(L(80, w + m * 60));
+        for (; m < 170; ++m) h5.Registrar(L(70, w + m * 60));
+        h5.Registrar(L(60, w + 170 * 60));
+        auto e5 = h5.EstimarDescarga(60);                          // marcos 80 (min 49), 70 (110), 60 (170)
+        CHECA(e5.fonte == EstimativaDescarga::SESSAO && std::fabs(e5.minutos - 360) < 15);
     }
     {
         Historico h2(pasta, 120);                                  // relê dos arquivos
@@ -202,7 +236,41 @@ static void TestarIcones() {
     Gdiplus::GdiplusShutdown(tok);
 }
 
+// Simula um mouse mexendo: 'taxa' avisos por segundo, em rajadas de 0,6 s com pausas de 0,2 s.
+// 'falha' = fração de avisos que não vieram (mouse devagar: nem todo aviso tem movimento).
+static int MedirSimulado(double taxa, double falha, double segundos) {
+    polling::Medidor m;
+    double passo = 1000.0 / taxa, t = 5000;
+    unsigned semente = 12345;
+    for (double fim = t + segundos * 1000; t < fim;) {
+        for (double r = 0; r < 600; r += passo, t += passo) {
+            semente = semente * 1103515245u + 12345u;
+            double sorteio = ((semente >> 16) & 0x7fff) / 32768.0;
+            double jitter = (sorteio - 0.5) * passo * 0.3;       // o Windows entrega com um pouco de bagunça
+            if (sorteio >= falha) m.Evento(t + jitter);
+        }
+        t += 200;
+    }
+    return m.Hz();
+}
+
+static void TestarPolling() {
+    CHECA(polling::AjustarParaTaxaComum(947) == 1000);
+    CHECA(polling::AjustarParaTaxaComum(480) == 500);
+    CHECA(polling::AjustarParaTaxaComum(130) == 125);
+    CHECA(polling::AjustarParaTaxaComum(1900) == 2000);
+    CHECA(polling::AjustarParaTaxaComum(50) == 50);                 // fora da faixa: devolve o número
+    CHECA(MedirSimulado(1000, 0, 4) == 1000);
+    CHECA(MedirSimulado(500, 0, 4) == 500);
+    CHECA(MedirSimulado(125, 0, 6) == 125);
+    CHECA(MedirSimulado(1000, 0.12, 4) == 1000);                    // mouse devagar, 12% dos avisos faltando
+    polling::Medidor poucos;
+    for (int i = 0; i < 30; ++i) poucos.Evento(1000 + i);           // 30 ms de movimento: pouco demais
+    CHECA(poucos.Hz() == 0);
+}
+
 int wmain() {
+    TestarPolling();
     TestarProtocolo();
     TestarHistorico();
     TestarSuavizador();
