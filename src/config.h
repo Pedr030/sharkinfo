@@ -16,7 +16,6 @@ struct Config {
     std::wstring celularServidor = L"https://ntfy.sh";
     bool avisarCargaCompleta = true;
     int minutosCargaPadrao = 120;      // até aprender o tempo real
-    int horasBateriaPadrao = 60;       // "bateria cheia dura X h de uso", até aprender o real
     int forcarEscalaDezenas = -1;      // -1 automático, 1 = dezenas, 0 = porcentagem
     bool widgetBarra = true;           // mouse + "93%" encaixado na barra de tarefas (padrão)
     bool iconeNumero = false;          // ícone da bandeja mostra o número em vez do mouse

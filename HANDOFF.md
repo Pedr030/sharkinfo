@@ -34,7 +34,7 @@ O SharkInfo é um app de bandeja do Windows que mostra a bateria de mouses sem f
 ### Problemas vistos no hardware real e já corrigidos (falta confirmar no PC)
 
 - **A % pulava 80 → 90 → 80.** A tensão da bateria se recupera em repouso e, com degraus de 10%, o valor fica oscilando na divisa entre dois degraus. Foi resolvido com o `suavizador.h` (seção 5.3).
-- **"Tempo restante: calculando…" para sempre.** A regra antiga exigia 20 min e 2% de queda, o que num mouse de 10 em 10% demora horas. Foi trocada pelos "marcos de queda", com aprendizado dos dias anteriores e um chute inicial (seção 5.4).
+- **"Tempo restante: calculando…" para sempre.** A regra antiga exigia 20 min e 2% de queda, o que num mouse de 10 em 10% demora horas. Foi trocada pelos "marcos de queda", com aprendizado das descargas anteriores (seção 5.4). Na v1.0.1 o chute inicial (`horas_bateria_padrao`, que dava "48 h") foi removido: sem dados, mostra "calculando…".
 
 ### Ainda NÃO verificado no Windows real
 
@@ -172,7 +172,7 @@ Ele roda **antes** de tudo (histórico, ícone e avisos), em `LacoLeitura`.
 
 - **Sessões de uso:** cortam no cabo e em buracos de mais de 30 min sem leitura. O app grava pelo menos 1 linha por minuto enquanto o mouse está acordado. Mouse dormindo ou PC desligado criam buracos, e assim a conta mede **tempo de uso**.
 - **Marcos de queda:** são os momentos em que a % chega a um valor mais baixo do que já tinha chegado na sessão. A taxa é `(1º marco − último marco) / tempo entre eles`. Exige 2 marcos e pelo menos 10 min entre eles. Subidas são ignoradas.
-- **Tempo restante:** a fonte `SESSAO` usa a taxa da sessão atual. Se não houver, a fonte `HISTORICO` usa a média das sessões anteriores, ponderada pelo tempo. Sem nada, a fonte `PADRAO` usa `horas_bateria_padrao` (60 h) e a interface mostra "(estimativa inicial)". Os avisos **não** citam o chute inicial.
+- **Tempo restante:** a fonte `SESSAO` usa a taxa da descarga atual. Se não houver, a fonte `HISTORICO` usa a média das descargas anteriores, ponderada pelo tempo de uso. Sem nada, `minutos = -1` e a interface mostra "calculando…" (não existe mais chute inicial). Uma "descarga" vai de um cabo ao próximo; buracos sem leitura não cortam, só não contam no relógio de uso (por isso marcos de dias diferentes se somam). Só corta se, depois de um buraco, a % subir 20 pontos ou mais sem cabo (carregou fora do app).
 - **Carga:** o mouse não informa a % no cabo. Então o app guarda a % de quando o cabo foi plugado e o horário em que chegou a 100%, e aprende a mediana dos minutos por % das últimas 5 cargas completas (só cargas que começaram abaixo de 95%). Até aprender, usa `minutos_carga_padrao` (120). O número no ícone enquanto carrega é o **palpite** da % atual.
 
 ### 5.5 Ícone e widget
@@ -214,5 +214,5 @@ Ele roda **antes** de tudo (histórico, ícone e avisos), em `LacoLeitura`.
 2. Pedir ao dono para instalar a v1.0.0, depois publicar uma **v1.0.1** pequena e confirmar o ciclo inteiro do atualizador no PC dele.
 3. Confirmar o **texto do widget** e o alinhamento com um print sem a dica por cima.
 4. Testar a **faixa** e as **notificações** com o `--demo` (descarrega até 5%, vai pro cabo e enche em ~2 min).
-5. Descobrir quanto o X6/R1 dura e ajustar o padrão de `horas_bateria_padrao` (hoje 60 h é chute).
+5. Descobrir quanto o X6/R1 dura de verdade (agora o app aprende sozinho, sem padrão).
 6. Ideias que o dono pode querer: suporte a headset (o print original do krisgfx mostrava headset + mouse), widget em segundo monitor e escolha de cores.

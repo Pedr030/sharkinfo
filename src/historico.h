@@ -19,8 +19,9 @@ struct PontoHistorico {
 
 struct EstimativaDescarga {
     double minutos = -1;       // quanto tempo de USO ainda resta (-1 = sem estimativa)
-    enum Fonte { SESSAO, HISTORICO, PADRAO } fonte = PADRAO;
-    // SESSAO = medida agora | HISTORICO = aprendida nos dias anteriores | PADRAO = chute inicial
+    enum Fonte { SESSAO, HISTORICO } fonte = SESSAO;
+    // SESSAO = medida na descarga de agora | HISTORICO = aprendida nas descargas anteriores.
+    // Não existe "chute": sem dados de verdade, minutos fica em -1 e a interface mostra "calculando…".
 };
 
 struct EstimativaCarga {
@@ -32,14 +33,13 @@ struct EstimativaCarga {
 
 class Historico {
 public:
-    Historico(const std::wstring& pasta, double minutosCargaPadrao, double horasBateriaPadrao = 60);
+    Historico(const std::wstring& pasta, double minutosCargaPadrao);
     void Registrar(const Leitura& l);
     std::vector<PontoHistorico> LeiturasDesde(double segundos, double agora) const;
     EstimativaDescarga EstimarDescarga(int percentualAtual) const;
     double MinutosPorPorcentoCarga(bool& aprendido) const;
     EstimativaCarga EstimarCarga(double agora) const;
     void DefinirCargaPadrao(double minutos);
-    void DefinirBateriaPadrao(double horas);
 
 private:
     void AcompanharCarga(const Leitura& l);
@@ -51,7 +51,6 @@ private:
     struct Carga { double inicio, fim; int de; };
     std::vector<Carga> cargas_;
     double minutosCargaPadrao_;
-    double horasBateriaPadrao_;
     bool temUltima_ = false;
     PontoHistorico ultima_{};               // última linha gravada
     double cargaInicio_ = -1;               // quando plugou o cabo (-1 = não está carregando)
@@ -59,9 +58,13 @@ private:
     int ultimoDescarregando_ = -1;          // último % visto fora do cabo
 };
 
-// Velocidade de descarga (% por segundo) de uma sessão, pelos "marcos de queda": os momentos em que
+// Velocidade de descarga (% por segundo) de uma descarga, pelos "marcos de queda": os momentos em que
 // a bateria chegou a um valor mais baixo do que já tinha chegado. Subidas (tensão se recuperando) são
-// ignoradas. Precisa de 2 marcos com pelo menos 10 min entre eles. Devolve -1 se não der.
+// ignoradas. Precisa de 2 marcos com pelo menos 10 min de uso entre eles. Devolve -1 se não der.
+// Cada par é (relógio de uso em segundos, %), como devolvido por SepararSessoes.
 double TaxaPorMarcos(const std::vector<std::pair<double, double>>& sessao);
-// Separa o histórico em sessões de uso: corta no cabo e em buracos sem leitura (PC desligado, mouse dormindo).
+// Separa o histórico em descargas (de um cabo ao próximo). Buracos sem leitura (PC desligado, mouse
+// dormindo) NÃO cortam a descarga: o "relógio de uso" simplesmente não anda durante o buraco, então
+// os marcos de dias diferentes se somam e a taxa sai mais cedo. Só corta se, depois do buraco, a % subiu
+// bastante sem cabo (o mouse foi carregado fora do app). O primeiro valor de cada par é esse relógio.
 std::vector<std::vector<std::pair<double, double>>> SepararSessoes(const std::vector<PontoHistorico>& pts);
