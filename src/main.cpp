@@ -143,8 +143,8 @@ static std::wstring TextoEstimativa(const Estado& e) {
         return L"Cheio em: calculando…";
     }
     if (e.descarga.minutos < 0) return L"Tempo restante: calculando…";
-    if (e.descarga.fonte == EstimativaDescarga::MINIMO)       // ainda medindo: só dá pra garantir um mínimo
-        return L"Bateria dura pelo menos " + FormatarMinutos(e.descarga.minutos) + L" (medindo)";
+    if (e.descarga.fonte == EstimativaDescarga::MINIMO)       // ainda medindo: o número é só um piso garantido
+        return L"Tempo restante: calculando… (garantido ≥ " + FormatarMinutos(e.descarga.minutos) + L")";
     return L"Bateria dura ~" + FormatarMinutos(e.descarga.minutos);
 }
 
@@ -548,6 +548,7 @@ static DadosHub MontarDadosHub() {
     polling::Resultado p = polling::Atual();
     d.pollingHz = p.hz;
     d.pollingAoVivo = p.aoVivo;
+    d.pollingEventos = p.eventos;
     static bool inicio = false;                               // o registro só é consultado de 3 em 3 s (o hub repinta muito)
     static ULONGLONG ultimaConsulta = 0;
     if (GetTickCount64() - ultimaConsulta > 3000 || ultimaConsulta == 0) {
