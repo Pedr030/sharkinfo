@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(SharkInfo WIN32
   src/main.cpp src/leitores.cpp src/historico.cpp src/avisos.cpp
   src/icone.cpp src/grafico.cpp src/config.cpp src/sistema.cpp src/widget.cpp src/atualizador.cpp
+  src/polling.cpp src/hub.cpp
   res/app.rc)
 target_compile_definitions(SharkInfo PRIVATE UNICODE _UNICODE NOMINMAX _WIN32_WINNT=0x0A00 WINVER=0x0A00)
 target_link_libraries(SharkInfo PRIVATE hid setupapi gdiplus winhttp bcrypt shell32 comctl32 gdi32 user32 advapi32)

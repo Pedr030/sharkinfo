@@ -45,7 +45,9 @@ No menu → **Atualizações** dá para procurar na hora ou desligar a atualiza�
 | Tempo restante | "Bateria dura ~6 h 10 min", pela velocidade com que a bateria vem caindo |
 | Tempo para carregar | "Cheio em ~45 min" enquanto está no cabo |
 | Carga completa | "Mouse em 100%, pode tirar do cabo" |
-| Histórico | Clique esquerdo no ícone: gráfico de 24 h ou 7 dias, com os períodos no cabo em azul |
+| Hub | **Clique esquerdo** no ícone (ou na % da barra): janela escura com o mouse grande, bateria, tempo restante, polling rate, carga, histórico, avisos e ajustes. O clique direito continua abrindo o menu |
+| Polling rate | "1000 Hz" no hub, **medido** pelo movimento do mouse (o receptor não informa isso). Mexa o mouse um pouco e aparece |
+| Histórico | No hub, aba **Histórico**: gráfico de 24 h ou 7 dias, com os períodos no cabo em azul (o menu também tem **Ver histórico**) |
 
 **Faixa por cima do jogo:** funciona com o jogo em **janela sem bordas**. Ela não rouba o foco e o clique atravessa ela. Em **tela cheia exclusiva**, o Windows não deixa nada aparecer por cima; aí valem a notificação e o celular. Para conferir, abra o jogo e use **Avisos → Testar faixa na tela**.
 
@@ -61,7 +63,7 @@ No menu do ícone, em **Aparência**, há duas opções:
 ## Como funcionam as estimativas
 
 - **Filtro anti pula-pula:** a bateria "se recupera" um pouco quando o mouse descansa, e o número pode ir e voltar (80 → 90 → 80), principalmente em modelos que medem de 10 em 10%, como o X6/R1. Para descer, a maioria das leituras dos últimos 3 minutos precisa concordar. Para subir fora do cabo, o valor mais alto precisa se manter por 10 minutos.
-- **Bateria restante:** o app anota os "marcos de queda", que são os momentos em que a bateria chega a um valor mais baixo do que já tinha chegado. O tempo entre o primeiro e o último marco dá a velocidade de descarga. Enquanto a descarga atual ainda não tem dois marcos, ele usa a velocidade aprendida nas descargas anteriores. Na primeira vez de todas não há chute: aparece "calculando…" até o mouse cair um degrau inteiro (10%, no X6/R1). A conta considera só o tempo de uso: PC desligado ou mouse dormindo não contam, mas também não zeram nada, então os marcos de dias diferentes se somam e a estimativa sai mais cedo.
+- **Bateria restante:** o app anota os "marcos de queda", que são os momentos em que a bateria chega a um valor mais baixo do que já tinha chegado. O tempo entre o primeiro e o último marco dá a velocidade de descarga. Enquanto a descarga atual ainda não tem dois marcos, ele usa a velocidade aprendida nas descargas anteriores. Na primeira vez de todas não há chute: depois de 10 min no mesmo degrau aparece "dura pelo menos X" (um mínimo de verdade, que só cresce a cada minuto de uso) e, quando o mouse cai um degrau inteiro (10%, no X6/R1), vira a medida real. A conta considera só o tempo de uso: PC desligado ou mouse dormindo não contam, mas também não zeram nada, então os marcos de dias diferentes se somam e a estimativa sai mais cedo.
 - **Tempo de carga:** no cabo, o mouse Attack Shark **não informa a %**. Ele só avisa "carregando" e depois "cheio". Então o app anota com quantos % você plugou e quanto tempo levou até encher, e aprende a velocidade real de carga (mediana das últimas 5 cargas). Até a primeira carga completa, usa o padrão de 120 min de 0 a 100% e mostra "(aprendendo)".
 
 ## Celular (opcional)
@@ -130,7 +132,9 @@ O GitHub Actions faz quase tudo:
 | `atualizador.cpp` | Atualização automática pelo GitHub Releases |
 | `suavizador.h` | Filtro que impede a % de ficar pulando |
 | `versao.h` | A versão do app (o build da release preenche) |
-| `grafico.cpp` | Janela do histórico, desenhada à mão com GDI+ |
+| `grafico.cpp` | Janela do histórico clássica (item **Ver histórico** do menu), desenhada à mão com GDI+ |
+| `hub.cpp` | O hub: janela escura com início, histórico, avisos, ajustes e sobre |
+| `polling.cpp` | Mede o polling rate pelo movimento do mouse (Raw Input), numa thread própria |
 | `config.cpp` | Lê e grava o config.ini |
 | `sistema.cpp` | Iniciar com o Windows e impedir que o app abra duas vezes |
 | `comum.h` | Peças compartilhadas: a ficha `Leitura`, a trava para threads e funções de tempo |

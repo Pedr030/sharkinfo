@@ -2,6 +2,13 @@
 
 Cada versão publicada tem uma seção aqui. O texto da seção vira as notas da release e aparece na janela de atualização do app.
 
+## v1.0.2
+
+- Novo **hub**: o clique esquerdo no ícone (ou na % da barra de tarefas) abre uma janela escura com tudo num lugar só: o mouse grande com a bateria, tempo restante, polling rate, tempo de carga, histórico, avisos, ajustes e atualizações. O clique direito continua abrindo o mesmo menu de antes.
+- **Polling rate**: o app mede quantas vezes por segundo o mouse se comunica (125, 250, 500, 1000 Hz...) pelo movimento do mouse e mostra no hub. Mexa o mouse um pouco e o número aparece.
+- Tempo restante sem esperar tanto: depois de 10 min no mesmo degrau da bateria o app já mostra "dura pelo menos X", um mínimo de verdade que cresce a cada minuto de uso e vira a medida real assim que a bateria cai um degrau.
+- Mouse pulando entre dois níveis (80 ↔ 90) não atrapalha mais a conta do tempo restante.
+
 ## v1.0.1
 
 - Fim do "chute" de tempo restante: antes o app mostrava algo como "48 h (estimativa inicial)". Agora, sem dados reais, mostra só "calculando…".
